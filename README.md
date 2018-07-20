@@ -16,7 +16,7 @@ f(10)
 ```
 Yes, just that simple. You just defined an iterate function, given the initial values and asked for the value of f(10).
 
-
+### Power Function
 It's really easy to define functions and solve them in Calc Pro. You can define functions with multiple varibles too.
 ```
 power(x,y)=power(x,y-1)*x
