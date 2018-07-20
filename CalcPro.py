@@ -14,9 +14,11 @@
 # 18.2.10  15.38-16:50分数和根式输出
 #                     增加递归函数标记
 # 18.2.22             bug修复,plot |
+# 18.4.5   21.00-21.48绘制penrose图
+# 18.4.6   17.00-20.04将cal()改为非递归
 #                   To Do
 #
-#               版本号1.3.1
+#               版本号1.4.0.1
 #
 ###############################################
 import re
@@ -40,7 +42,7 @@ re_num=re.compile(r'^[\+\-]?[0-9\.]+e?[\+\-]?[0-9\.]*$')
 re_num2=re.compile(r'^[\+\-]?[0-9]+')
 colorset=['#005980','#00B1FF','#4479FF','#2E912D','#4A33E8','#B38CFF','#B0433A','#3390A8','#D9283E','#540032','#46BC9F','#820333']
 plot_file='_plot.png'
-switches_init={'time':False,'debug':False,'vline':True,'hline':False,'fraction':True,'sub':False}
+switches_init={'time':False,'debug':False,'vline':True,'hline':False,'fraction':True,'eng':True}
 settings_init={'bound':1e5,'precision':1e-9,'iteration':4000,'cab':200}
 switches,settings=switches_init.copy(),settings_init.copy()
 input_count=0
@@ -49,7 +51,7 @@ var_def_init={'pi':m.pi,'e':m.e}
 func_def_init={'out':[1,[],[],[{},{}]]}#变量个数，[变量列表]，[[函数定义]]，部分定义[{不带自变量:[]},{带自变量:[]}]
 var_def,func_def=var_def_init.copy(),func_def_init.copy()
 func_ite=set()#标记递归定义的函数
-func_in={'int':int,'sqrt':m.sqrt,'ln':m.log,'lg':m.log10,'abs':m.fabs,'sin':m.sin,'cos':m.cos,'tan':m.tan,'sinh':m.sinh,'cosh':m.cosh,'tanh':m.tanh,'arcsin':m.asin,'arccos':m.acos,'arctan':m.atan,'gamma':m.gamma,'erf':m.erf}
+func_in={'int':int,'sqrt':m.sqrt,'ln':m.log,'lg':m.log10,'abs':m.fabs,'sin':m.sin,'cos':m.cos,'tan':m.tan,'sinh':m.sinh,'cosh':m.cosh,'tanh':m.tanh,'arcsin':m.asin,'arccos':m.acos,'arctan':m.atan,'gamma':m.gamma,'erf':m.erf,'gtr':lambda x:m.sqrt(x)-m.sqrt(x)}
 func_in2={'max':max,'min':min,'log':lambda x,y:m.log(y,x),'C':lambda x,y:m.gamma(x+1)/m.gamma(x-y+1)/m.gamma(y+1),'A':lambda x,y:m.gamma(x+1)/m.gamma(x-y+1),'randn':random.gauss}
 primes=[2,3,5,7,11,13,17,19,23,29,31,37,41,43,47,53,59,61,67,71,73,79,83,89,97,101,103,107,109,113,127,131,137,139,149,151,157,163,167,173,179,181,191,193,197,199,211,223,227,229,233,239,241,251,257,263,269,271,277,281,283,293,307,311,313,317,331,337,347,349,353,359,367,373,379,383,389,397,401,409,419,421,431,433,439,443,449,457,461,463,467,479,487,491,499,503,509,521,523,541,547,557,563,569,571,577,587,593,599,601,607,613,617,619,631,641,643,647,653,659,661,673,677,683,691,701,709,719,727,733,739,743,751,757,761,769,773,787,797,809,811,821,823,827,829,839,853,857,859,863,877,881,883,887,907,911,919,929,937,941,947,953,967,971,977,983,991,997,1009,1013,1019,1021,1031,1033,1039,1049,1051,1061,1063,1069,1087,1091,1093,1097,1103,1109,1117,1123,1129,1151,1153,1163,1171,1181,1187,1193,1201,1213,1217,1223,1229,1231,1237,1249,1259,1277,1279,1283,1289,1291,1297,1301,1303,1307,1319,1321,1327,1361,1367,1373,1381,1399,1409,1423,1427,1429,1433,1439,1447,1451,1453,1459,1471,1481,1483,1487,1489,1493,1499,1511,1523,1531,1543,1549,1553,1559,1567,1571,1579,1583,1597,1601,1607,1609,1613,1619,1621,1627,1637,1657,1663,1667,1669,1693,1697,1699,1709,1721,1723,1733,1741,1747,1753,1759,1777,1783,1787,1789,1801,1811,1823,1831,1847,1861,1867,1871,1873,1877,1879,1889,1901,1907,1913,1931,1933,1949,1951,1973,1979,1987,1993,1997,1999,2003,2011,2017,2027,2029,2039,2053,2063,2069,2081,2083,2087,2089,2099,2111,2113,2129,2131,2137,2141,2143,2153,2161,2179,2203,2207,2213,2221,2237,2239,2243,2251,2267,2269,2273,2281,2287,2293,2297,2309,2311,2333,2339,2341,2347,2351,2357,2371,2377,2381,2383,2389,2393,2399,2411,2417,2423,2437,2441,2447,2459,2467,2473,2477,2503,2521,2531,2539,2543,2549,2551,2557,2579,2591,2593,2609,2617,2621,2633,2647,2657,2659,2663,2671,2677,2683,2687,2689,2693,2699,2707,2711,2713,2719,2729,2731,2741,2749,2753,2767,2777,2789,2791,2797,2801,2803,2819,2833,2837,2843,2851,2857,2861,2879,2887,2897,2903,2909,2917,2927,2939,2953,2957,2963,2969,2971,2999,3001,3011,3019,3023,3037,3041,3049,3061,3067,3079,3083,3089,3109,3119,3121,3137,3163,3167,3169,3181,3187,3191,3203,3209,3217,3221,3229,3251,3253,3257,3259,3271,3299,3301,3307,3313,3319,3323,3329,3331,3343,3347,3359,3361,3371,3373,3389,3391,3407,3413,3433,3449,3457,3461,3463,3467,3469,3491,3499,3511,3517,3527,3529,3533,3539,3541,3547,3557,3559,3571,3581,3583,3593,3607,3613,3617,3623,3631,3637,3643,3659,3671,3673,3677,3691,3697,3701,3709,3719,3727,3733,3739,3761,3767,3769,3779,3793,3797,3803,3821,3823,3833,3847,3851,3853,3863,3877,3881,3889,3907,3911,3917,3919,3923,3929,3931,3943,3947,3967,3989,4001,4003,4007,4013,4019,4021,4027,4049,4051,4057,4073,4079,4091,4093,4099,4111,4127,4129,4133,4139,4153,4157,4159,4177,4201,4211,4217,4219,4229,4231,4241,4243,4253,4259,4261,4271,4273,4283,4289,4297,4327,4337,4339,4349,4357,4363,4373,4391,4397,4409,4421,4423,4441,4447,4451,4457,4463,4481,4483,4493,4507,4513,4517,4519,4523,4547,4549,4561,4567,4583,4591,4597,4603,4621,4637,4639,4643,4649,4651,4657,4663,4673,4679,4691,4703,4721,4723,4729,4733,4751,4759,4783,4787,4789,4793,4799,4801,4813,4817,4831,4861,4871,4877,4889,4903,4909,4919,4931,4933,4937,4943,4951,4957,4967,4969,4973,4987,4993,4999,5003,5009,5011,5021,5023,5039,5051,5059,5077,5081,5087,5099,5101,5107,5113,5119,5147,5153,5167,5171,5179,5189,5197,5209,5227,5231,5233,5237,5261,5273,5279,5281,5297,5303,5309,5323,5333,5347,5351,5381,5387,5393,5399,5407,5413,5417,5419,5431,5437,5441,5443,5449,5471,5477,5479,5483,5501,5503,5507,5519,5521,5527,5531,5557,5563,5569,5573,5581,5591,5623,5639,5641,5647,5651,5653,5657,5659,5669,5683,5689,5693,5701,5711,5717,5737,5741,5743,5749,5779,5783,5791,5801,5807,5813,5821,5827,5839,5843,5849,5851,5857,5861,5867,5869,5879,5881,5897,5903,5923,5927,5939,5953,5981,5987,6007,6011,6029,6037,6043,6047,6053,6067,6073,6079,6089,6091,6101,6113,6121,6131,6133,6143,6151,6163,6173,6197,6199,6203,6211,6217,6221,6229,6247,6257,6263,6269,6271,6277,6287,6299,6301,6311,6317,6323,6329,6337,6343,6353,6359,6361,6367,6373,6379,6389,6397,6421,6427,6449,6451,6469,6473,6481,6491,6521,6529,6547,6551,6553,6563,6569,6571,6577,6581,6599,6607,6619,6637,6653,6659,6661,6673,6679,6689,6691,6701,6703,6709,6719,6733,6737,6761,6763,6779,6781,6791,6793,6803,6823,6827,6829,6833,6841,6857,6863,6869,6871,6883,6899,6907,6911,6917,6947,6949,6959,6961,6967,6971,6977,6983,6991,6997,7001,7013,7019,7027,7039,7043,7057,7069,7079,7103,7109,7121,7127,7129,7151,7159,7177,7187,7193,7207,7211,7213,7219,7229,7237,7243,7247,7253,7283,7297,7307,7309,7321,7331,7333,7349,7351,7369,7393,7411,7417,7433,7451,7457,7459,7477,7481,7487,7489,7499,7507,7517,7523,7529,7537,7541,7547,7549,7559,7561,7573,7577,7583,7589,7591,7603,7607,7621,7639,7643,7649,7669,7673,7681,7687,7691,7699,7703,7717,7723,7727,7741,7753,7757,7759,7789,7793,7817,7823,7829,7841,7853,7867,7873,7877,7879,7883,7901,7907,7919,7927,7933,7937,7949,7951,7963,7993,8009,8011,8017,8039,8053,8059,8069,8081,8087,8089,8093,8101,8111,8117,8123,8147,8161,8167,8171,8179,8191,8209,8219,8221,8231,8233,8237,8243,8263,8269,8273,8287,8291,8293,8297,8311,8317,8329,8353,8363,8369,8377,8387,8389,8419,8423,8429,8431,8443,8447,8461,8467,8501,8513,8521,8527,8537,8539,8543,8563,8573,8581,8597,8599,8609,8623,8627,8629,8641,8647,8663,8669,8677,8681,8689,8693,8699,8707,8713,8719,8731,8737,8741,8747,8753,8761,8779,8783,8803,8807,8819,8821,8831,8837,8839,8849,8861,8863,8867,8887,8893,8923,8929,8933,8941,8951,8963,8969,8971,8999,9001,9007,9011,9013,9029,9041,9043,9049,9059,9067,9091,9103,9109,9127,9133,9137,9151,9157,9161,9173,9181,9187,9199,9203,9209,9221,9227,9239,9241,9257,9277,9281,9283,9293,9311,9319,9323,9337,9341,9343,9349,9371,9377,9391,9397,9403,9413,9419,9421,9431,9433,9437,9439,9461,9463,9467,9473,9479,9491,9497,9511,9521,9533,9539,9547,9551,9587,9601,9613,9619,9623,9629,9631,9643,9649,9661,9677,9679,9689,9697,9719,9721,9733,9739,9743,9749,9767,9769,9781,9787,9791,9803,9811,9817,9829,9833,9839,9851,9857,9859,9871,9883,9887,9901,9907,9923,9929,9931,9941,9949,9967,9973]
 #10000以内的质数表1229个质数
@@ -66,7 +68,8 @@ $c$·表达式运算 $e$
 
     ·按 Ctrl+C 中断操作或放弃当前输入行 
 
-    ·支持一元运算符 + - 和二元运算符 + - * / \ % ^ 
+    ·支持一元运算符 + - ! 和二元运算符 + - * / \ % ^ | 
+            (正、负、阶乘)(加、减、乘、除、整除、取余、求幂、并联电阻) 
 
     ·数字和常数、变量、函数之间的乘号可以省略 
 
@@ -76,6 +79,8 @@ $c$·表达式运算 $e$
 
     ·内置基础函数 
         ·一元函数 '''+','.join([x for x in func_in])+' \n        ·二元函数 '+','.join([x for x in func_in2])+r''' 
+        ·其中int为下取整，C(m,n)计算组合数，A(m,n)计算排列数，
+         log(m,n)计算log_m(n)，randn(μ,σ²)获取服从正态分布N(μ,σ²)的随机数。 
 
     ·内置函数out(n)存储第n次输出的结果（n可以为负） 
 
@@ -83,6 +88,7 @@ $c$·表达式运算 $e$
 
     $g$示例： 
     1) 3+4*2/(1-5)^2^3-C(5,2)max(-pi,e)+sin'(2pi) 
+    2) 3|(4+2|(5+3|1))+4 
     
 $c$·变量和函数的定义及使用 $e$ 
 
@@ -100,6 +106,7 @@ $c$·变量和函数的定义及使用 $e$
      获取服从$y$正态分布$e$N(μ,σ²)的随机数使用函数randn(μ,σ²) 
 
     ·清除某一定义输入 $clean 变量名或函数名 
+     重新定义函数会自动清除原函数的定义
 
     ·清除所有定义输入 $clean 
 
@@ -199,6 +206,8 @@ $c$·函数绘图 $e$
 
     ·极坐标绘图使用$polar代替$plot 
 
+    ·Penrose绘图使用$penrose代替$plot 
+
     ·函数密度图 
         ·绘制当x∈[a,b]时函数y=f(x)的值在区间[y1,y2]上的概率密度分布图 
          $density f a b y1 y2 step 
@@ -236,6 +245,10 @@ $c$·函数绘图 $e$
 
     10) f(x)=3x^2;$bound 5;$density .f+*f+f' 0 1 0 1 
 
+    11) f(x)=cos(x)+0.5cos(4x/3);g(x)=sin(x)-0.5sin(4x/3); 
+        h(x)=1.125cos(x)+1.2cos(x/8);i(x)=1.125sin(x)+1.2sin(x/8); 
+        $plot f&g+h&i 0 16pi 0.01 
+
 $c$·分解质因数 $e$ 
     （为保证计算速度，$y$取10000以内的质数表进行求解$e$） 
     ·求p的质因数分解： 
@@ -260,7 +273,7 @@ $c$·开关和设定 $e$
      输入 $time$      开启time 
      输入 $time$$     关闭time 
 
-    ·设定有 bound precision iteration，以bound为例 
+    ·设定有 bound precision iteration cab，以bound为例 
      输入 $bound      显示当前bound值 
      输入 $bound$     重置bound值 
      输入 $bound 1e3  设置bound值为1e3 
@@ -273,30 +286,40 @@ $c$·开关和设定 $e$
 #      即将问题f(1000)分解为f(100),f(200),...,f(1000) 
 #      同时此开关也会影响非递归函数的计算。 
 #     ·默认值为False，一般无需修改。 
+'''
+内部使用符号说明
+一元正负号用正则替换为~`
+科学计数法中的e用正则替换为@
+二元运算符|用以计算并联电阻
+:代表惰性求值
+{}被替换为()
+'''
 help_document=help_document.replace('$c$',Fore.CYAN).replace('$e$',Fore.RESET).replace('$g$',Fore.GREEN).replace('$y$',' '+Fore.YELLOW)
 def main():
     global var_def,func_def,input_count,switches,settings,last_warning
     printc(Fore.CYAN+random_ico())
     printc('************************************\n'+
-          '*     Calc Pro by John Ao v1.3     *\n'+
+          '*     Calc Pro by John Ao v1.5     *\n'+
           '*        查看帮助请输入 $help      *\n'+
 Style.DIM+'*       请注意切换至英文输入法     *\n'+Style.BRIGHT+
           '************************************\n')
     while True: #交互模式if改为while
-        # try:     #^C中断
-        #     e_in=input('In:=')
-        # except:
-        #     print()
-        #     continue
+        try:     #^C中断
+            e_in=input('In:=')
+        except KeyboardInterrupt:
+            print()
+            continue
         #e_in=r'$time;g(1)=1;g(2)=1;g(x)=g(x-1)+g(x-2);g(400)'
         #e_in=r'g(1)=1;g(2)=1;g(x)=g(x-1)+g(x-2);$list g 1 10'
-        e_in=r"g(x)=g(x);g(x)=x+1;g(1)=1"
+        # e_in=r"g(x)=g(x);g(x)=x+1;g(1)=1"
         while e_in and e_in[0]==' ':
             e_in=e_in[1:]
         for exp_in in [x for x in re.split(r'\s*;\s*',e_in) if x]:
             input_count+=1
             last_warning=''
             time_s=time()
+            if exp_in=='$exit':
+                exit()
             try:
                 if re.match(r'^\s*\$',exp_in):
                     exp_in=intellispell(exp_in.replace('$.','$fraction').replace(',','+'))
@@ -325,6 +348,8 @@ Style.DIM+'*       请注意切换至英文输入法     *\n'+Style.BRIGHT+
                         exp_re=func_integ(exp_spec)
                     elif cmd=='polar':
                         exp_re=func_plot(exp_spec,polar=True)
+                    elif cmd=='penrose':
+                        exp_re=func_plot(exp_spec,penrose=True)
                     elif cmd=='factor':
                         exp_re=factor_gui(exp_spec)
                     elif cmd=='clean':
@@ -381,7 +406,12 @@ Style.DIM+'*       请注意切换至英文输入法     *\n'+Style.BRIGHT+
                             f=exp_arr[0]
                             f_var=exp_arr[2:equ_pos-1:2]
                             f_isdef=False #是否为部分定义
-                            f_exp=exp_arr[equ_pos+1:]
+                            if not f in func_def:
+                                func_def[f]=[]
+                                f_exp=toSuffix(exp_arr[equ_pos+1:])
+                                func_def.pop(f)
+                            else:
+                                f_exp=toSuffix(exp_arr[equ_pos+1:])
                             f_var_allnum=True#是否全为数值
                             for i in f_var:
                                 if s_type(i)=='num':
@@ -397,7 +427,7 @@ Style.DIM+'*       请注意切换至英文输入法     *\n'+Style.BRIGHT+
                                 if f in func_def:
                                     if f_isdef:
                                         if not f in func_ite:
-                                            exp_re='Error - Invalid for non-iteration function [%s]'%f
+                                            exp_re='Error - Invalid for non-iterative function [%s]\n'%f+Fore.BLUE+'To overwrite the definition of [%s] first use $clean %s '%(f,f)
                                         else:
                                             if f_var_allnum:
                                                 func_def[f][3][0][to_str(f_var)]=f_exp
@@ -422,6 +452,7 @@ Style.DIM+'*       请注意切换至英文输入法     *\n'+Style.BRIGHT+
                                             func_def[f]=[equ_pos/2-1,[],[],[{to_str(f_var):f_exp},{}]]
                                         else:
                                             func_def[f]=[equ_pos/2-1,[],[],[{},{to_str(f_var):f_exp}]]
+                                        func_ite.add(f)
                                     else:
                                         func_def[f]=[equ_pos/2-1,f_var,f_exp,[{},{}]]
                                         func_ite.discard(f)
@@ -438,67 +469,67 @@ Style.DIM+'*       请注意切换至英文输入法     *\n'+Style.BRIGHT+
                         else:
                             exp_re='Error - Unexpected [=]'
                     else:
-                        func_sub=switches['sub']
-                        if re.match(r'^[a-zA-Z]+\([0-9\.]+e?[\+\-]?[0-9\.]*\)$',exp_in):
-                            func_sub=switches['sub']
-                            f=exp_arr[0]
-                            func_sub|=f in func_ite
-                            func_sub&=not (f in func_in or f in func_in2)
-                            if func_sub:
-                                x=to_num(exp_arr[2])
-                                if is_int(x):
-                                    if x>100:
-                                        i=1
-                                        while i*100<x:
-                                            exp_arr[2]=str(int(i*100))
-                                            cal(exp_arr)
-                                            i+=1
-                                        exp_arr[2]=str(x)
                         exp_re=cal(exp_arr)
-            except BaseException as e:
+            except (ArithmeticError,AssertionError) as e:
                 if not isinstance(e,IndexError):exp_re='Error - Unable to Evaluate\n'+Fore.CYAN+'->Maybe try $help'
                 if switches['debug']:print(e)
-            finally:
-                exp_re_=exp_re
-                exp_re=str(exp_re)
-                if exp_re:
-                    if s_type(exp_re)=='num':
-                        func_def['out'][3][0][str(input_count)]=[exp_re]
-                        if switches['fraction']:
-                            exp_re=str(pretty_print(exp_re_))
-                    if 'Error' in exp_re:
-                        exp_re=Fore.RED+exp_re
-                    elif 'Warning' in exp_re:
-                        exp_re=Fore.YELLOW+exp_re
-                    else:
-                        exp_re=Fore.WHITE+str(exp_re)
-                    printc(Fore.GREEN+'Out[%d]='%input_count+exp_re+' ')
-                if switches['time']:
-                    time_used=time()-time_s
-                    print(color(Fore.YELLOW,'Time used: %.3fs '%time_used))
-                print()
+            exp_re_=exp_re
+            exp_re=str(exp_re)
+            if exp_re:
+                if s_type(exp_re)=='num':
+                    func_def['out'][3][0][str(input_count)]=[exp_re]
+                    if switches['fraction'] and not isinstance(exp_re_,str):
+                        exp_re_=str(pretty_print(exp_re_))
+                        if not exp_re==exp_re_:
+                            exp_re=exp_re_+' '+Fore.GREEN+'\n'+' '*(6+int(m.log10(input_count)))+'≈'+Fore.RESET+exp_re
+                if 'Error' in exp_re:
+                    exp_re=Fore.RED+exp_re
+                elif 'Warning' in exp_re:
+                    exp_re=Fore.YELLOW+exp_re
+                else:
+                    exp_re=Fore.WHITE+str(exp_re)
+                printc(Fore.GREEN+'Out[%d]='%input_count+exp_re+' ')
+            if switches['time']:
+                time_used=time()-time_s
+                print(color(Fore.YELLOW,'Time used: %.3fs '%time_used))
+            print()
         print()
 
 def s_type(s):
     #判定s的类型
     if re_alp.match(s):
         return 'alp'
-    elif s in r'+-*/^%\(),=~`':
+    elif s in r'+-*/^%\(),=~`|!':
         return 'sym'
     elif re_num.match(s):
         return 'num'
     else:
         return 'unknown'
 def intellispell(st):
-    m=re.findall(r'\de[\-0]*\d',st)
-    if m:
-        for ma in m:
-            st=st.replace(ma,ma.replace('e','@'))
-    m=re.findall(r'\d[a-zA-Z]|[a-zA-Z]\d|\)[a-zA-Z\d]|\)\(',st)
-    if m:
-        for ma in m:
-            st=st.replace(ma,ma[0]+'*'+ma[1])
-    return st.replace('@','e')
+    if switches['eng']:
+        power=15
+        for eng in 'TGMK.munpf':
+            power-=3
+            if eng=='.':continue
+            for ma in re.findall(r'\d'+eng+'[^0-9]*',st):
+                st=st.replace(ma,ma.replace(eng,'e'+str(power)))
+    for ma in re.findall(r'\de[\-0]*\d',st):
+        st=st.replace(ma,ma.replace('e','@'))
+    for ma in re.findall(r'\d[a-zA-Z\(]|[a-zA-Z]\d|\)[a-zA-Z\d]|\)\(',st):
+        st=st.replace(ma,ma[0]+'*'+ma[1])
+    while True:
+        ma=re.search(r'[\*\\\/%^\|]:[^\}]*',st)
+        if not ma:
+            break
+        ma=ma.group()
+        st=st.replace(ma,ma[0]+'{'+ma[2:]+'}')
+    while True:
+        ma=re.search(r'[^\{}]*:[\*\\\/%^\|!]',st)
+        if not ma:
+            break
+        ma=ma.group()
+        st=st.replace(ma,'{'+ma[:-2]+'}'+ma[-1])
+    return st.replace('@','e').replace('{','(').replace('}',')')
 def calc_(st):
     return cal(to_arr(st))
 def to_arr(st):
@@ -521,8 +552,10 @@ def to_arr(st):
             continue
         if i=='e' and s_type(st[j-1])=='num' and re_num2.match(st[j+1:]):
             t='sci' #处理科学计数法
-        elif (t=='num' or i in '+-') and last_type=='sci':
+        elif i in '+-' and last_type=='sci':
             t='sci'
+        elif t=='num' and last_type=='sci':
+            pass
         else:
             if (not((last_type=='non') or (t==last_type))) or (t=='sym'):
                 arr.append(last)
@@ -531,14 +564,13 @@ def to_arr(st):
         last_type=t
     arr=list(filter(lambda x:x!='',arr+[last]))
     return arr
-def cal(arr):
+def toSuffix(arr):
     #======================转化为前缀========================
     nums=[]
     syms=[]
-    pn=[]#正负号
     para_c=0
     global last_warning
-    prio={'(':-1,')':-2,',':-3,'+':1,'-':1,'~':1,'`':1,'*':2,'/':2,'%':2,'\\':2,'^':3}
+    prio={'(':-1,')':-2,',':-3,'+':1,'-':1,'~':1,'`':1,'*':2,'/':2,'%':2,'\\':2,'|':2,'!':2,'^':3}
     for i in arr:
         if i=='rnd' or i[1:]=='rnd':
             i=i.replace('rnd',str(random.random()))
@@ -546,19 +578,13 @@ def cal(arr):
         if t=='num':
             nums.append(i)
         elif t=='alp':
-            if i in var_def:
-                nums.append(str(var_def[i]))
-            elif i in func_def or i in func_in or i in func_in2:
+            if i in func_def or i in func_in or i in func_in2:
                 syms.append(i)
-            elif i[:-1] in func_def or i[:-1] in func_in or i[:-1] in func_in2:
+            elif i[:-1] in func_def or i[:-1] in func_in or i[:-1] in func_in2:#带'的函数
                 syms.append(i)
             else:
-                now_warning='Warning - [%s] Undefined, taken as 0'%i
-                if now_warning!=last_warning:
-                    printc(Fore.YELLOW+now_warning)
-                    last_warning=now_warning
-                nums.append('0')
-        elif i in '~`':
+                nums.append(i)
+        elif i in '~`!':#单目运算符
             syms.append(i)
         elif t=='sym':
             p=prio[i]
@@ -594,121 +620,162 @@ def cal(arr):
                 syms.append(i)
     if syms:
         nums+=syms[::-1]
+    return nums
+def cal(arr,*is_suffix):
+    global last_warning
+    if is_suffix:
+        nums=arr
+    else:
+        nums=toSuffix(arr)
+    if isinstance(nums,str):
+        return nums
     #=======================计算===========================
-    re_num=[]
-    for k in nums:
-        t=s_type(k)
-        if t=='num':
-            tmp=to_num(k)
-            if isinstance(tmp,str):
-                return tmp
-            else:
-                re_num.append(tmp)
-        elif k in '~`':
-            if len(re_num)<1:
-                return 'Error - Insufficient numbers [1]'
-            if k=='`':
-                re_num[-1]=-re_num[-1]
-        elif t=='sym':
-            if len(re_num)<2:
-                return 'Error - Insufficient numbers [1]'
-            b=re_num.pop()
-            a=re_num.pop()
-            if k=='+':
-                c=a+b
-            elif k=='-':
-                c=a-b
-            elif k=='*':
-                c=a*b
-            elif k=='/':
-                c=a/b
-            elif k=='%':
-                c=a%b
-            elif k=='^':
-                c=m.pow(a,b)
-            elif k=='\\':
-                c=(a-a%b)/b
-            re_num.append(c)
-        elif t=='alp':
-            if k[-1]=="'":#求导数
-                if len(re_num)<1:
-                    return 'Error - Insufficient numbers'
-                x=re_num.pop()
-                err=1e-10
-                f_re=calc_('{0}({1}+{2})-{0}({1})'.format(k[:-1],x,err))
-                assert not isinstance(f_re,str)
-                f_re/=err
-            else:
-                if k in func_in:#内置函数
-                    if len(re_num)<1:
-                        return 'Error - Insufficient numbers'
-                    f_re=func_in[k](re_num.pop())
-                elif k in func_in2:
-                    if len(re_num)<2:
-                        return 'Error - Insufficient numbers'
-                    y,x=re_num.pop(),re_num.pop()
-                    f_re=func_in2[k](x,y)
+    cal_queue=[[[],nums[::-1],[]]]
+    while cal_queue:
+        next_queue=False
+        re_num,numlist,re_ite=cal_queue.pop()
+        # 数值栈，表达式栈，是否把结果存储给递归函数
+        while numlist:
+            k=numlist.pop()
+            t=s_type(k)
+            if t=='num':
+                tmp=to_num(k)
+                if isinstance(tmp,str):
+                    return tmp
                 else:
-                    f_list=func_def[k]#一定在func_def中，不然已经当做变量处理
-                    f_def={}#把定义中的相关变量替换为数值
-                    f_exp=[]
-                    f_len=int(f_list[0])
-                    f_match=[]
-                    f_matchexp=[]
-                    if len(re_num)<f_len:
-                        return 'Error - Insufficient numbers [2]'
-                    f_num=re_num[-f_len:]
-                    #寻找已有[部分定义]
-                    if k=='out':#如果是out()函数，允许负标号
-                        if f_num[0]<0:
-                            f_num[0]=int(input_count+f_num[0])
-                    f_num_str=to_str(f_num)
-                    if (k in func_ite or k=='out') and f_num_str in f_list[3][0]:
-                        f_match=f_num_str.split(',')
-                        f_matchexp=f_list[3][0][f_num_str]
+                    re_num.append(tmp)
+            elif k in '~`!':
+                if len(re_num)<1:
+                    return 'Error - Insufficient numbers [1]'
+                if k=='`':
+                    re_num[-1]=-re_num[-1]
+                elif k=='!':
+                    re_num[-1]=m.gamma(re_num[-1]+1)
+            elif t=='sym':
+                if len(re_num)<2:
+                    return 'Error - Insufficient numbers [1]'
+                b=re_num.pop()
+                a=re_num.pop()
+                if k=='+':
+                    c=a+b
+                elif k=='-':
+                    c=a-b
+                elif k=='*':
+                    c=a*b
+                elif k=='/':
+                    c=a/b
+                elif k=='%':
+                    c=a%b
+                elif k=='^':
+                    c=m.pow(a,b)
+                elif k=='\\':
+                    c=(a-a%b)/b
+                elif k=='|':
+                    c=a*b/(a+b)
+                re_num.append(c)
+            elif t=='alp':
+                if k in var_def:
+                    re_num.append(var_def[k])
+                else:
+                    tmp=k[:-1]
+                    if (k in func_in or k in func_in2 or k in func_def) or (k[-1]=="'" and (tmp in func_in or tmp in func_in2 or tmp in func_def)):
+                        if k[-1]=="'":#求导数
+                            if len(re_num)<1:
+                                return 'Error - Insufficient numbers'
+                            x=re_num.pop()
+                            err=1e-8
+                            f_re=calc_('{0}({1}+{2})-{0}({1})'.format(k[:-1],x,err))
+                            assert not isinstance(f_re,str)
+                            f_re/=err
+                        else:
+                            if k in func_in:#内置函数
+                                if len(re_num)<1:
+                                    return 'Error - Insufficient numbers'
+                                f_re=func_in[k](re_num.pop())
+                            elif k in func_in2:
+                                if len(re_num)<2:
+                                    return 'Error - Insufficient numbers'
+                                y,x=re_num.pop(),re_num.pop()
+                                f_re=func_in2[k](x,y)
+                            else:
+                                f_list=func_def[k]#一定在func_def中，不然已经当做变量处理
+                                f_def={}#把定义中的相关变量替换为数值
+                                f_exp=[]
+                                f_len=int(f_list[0])
+                                f_match=[]
+                                f_matchexp=[]
+                                if len(re_num)<f_len:
+                                    return 'Error - Insufficient numbers [2]'
+                                f_num=re_num[-f_len:]
+                                #寻找已有[部分定义]
+                                if k=='out':#如果是out()函数，允许负标号
+                                    if f_num[0]<0:
+                                        f_num[0]=int(input_count+f_num[0])
+                                f_num_str=to_str(f_num)
+                                if (k in func_ite or k=='out') and f_num_str in f_list[3][0]:
+                                    f_match=f_num_str.split(',')
+                                    f_matchexp=f_list[3][0][f_num_str]
+                                else:
+                                    for key in f_list[3][1]:
+                                        matched=True
+                                        i=key.split(',')
+                                        for j in range(f_len):
+                                            if not((s_type(i[j])=='alp') or (i[j]==str(f_num[j]))):
+                                                matched=False
+                                        if matched:
+                                            f_match=i
+                                            f_matchexp=f_list[3][1][key]
+                                noPartial=(f_match==[])
+                                if noPartial:#如果没有找到[部分定义]则使用[定义]
+                                    f_match=f_list[1]
+                                    f_matchexp=f_list[2]
+                                assert f_match!=[]
+                                for i in range(f_len):
+                                    f_var=f_match[-1-i]
+                                    p=re_num.pop()
+                                    if s_type(f_var)=='alp':
+                                        f_def[f_var]=p
+                                for i in f_matchexp:
+                                    if (s_type(i)=='alp') and (i in f_def):
+                                        i=str(f_def[i])
+                                    f_exp.append(i)
+                                if k in func_ite and noPartial:
+                                    cal_queue.append([re_num,numlist,[]])
+                                    cal_queue.append([[],f_exp[::-1],[k,3,0,','.join(map(str,f_num))]])
+                                    next_queue=True
+                                    break
+                                else:
+                                    f_re=cal(f_exp,True)
+                                if isinstance(f_re,str):
+                                    return f_re
+                        re_num.append(f_re)
                     else:
-                        for key in f_list[3][1]:
-                            matched=True
-                            i=key.split(',')
-                            for j in range(f_len):
-                                if not((s_type(i[j])=='alp') or (i[j]==str(f_num[j]))):
-                                    matched=False
-                            if matched:
-                                f_match=i
-                                f_matchexp=f_list[3][1][key]
-                    if f_match==[]:#如果没有找到[部分定义]则使用[定义]
-                        f_match=f_list[1]
-                        f_matchexp=f_list[2]
-                    assert f_match!=[]
-                    for i in range(f_len):
-                        f_var=f_match[-1-i]
-                        p=re_num.pop()
-                        if s_type(f_var)=='alp':
-                            f_def[f_var]=p
-                    for i in f_matchexp:
-                        if (s_type(i)=='alp') and (i in f_def):
-                            i=str(f_def[i])
-                        f_exp.append(i)
-                    f_re=cal(f_exp)
-                    if isinstance(f_re,str):
-                        return f_re
-                    if k in func_ite:
-                        func_def[k][3][0][','.join(map(str,f_num))]=[str(f_re)]#如果递归则添加[部分定义]
-            re_num.append(f_re)
-    if len(re_num)!=1:
-        return 'Error - Too many numbers'
+                        now_warning='Warning - [%s] Undefined, taken as 0'%i
+                        if now_warning!=last_warning:
+                            printc(Fore.YELLOW+now_warning)
+                            last_warning=now_warning
+                        re_num.append(0)
+        if next_queue:
+            continue
+        if len(re_num)!=1:
+            return 'Error - Too many numbers'
+        if cal_queue:
+            cal_queue[-1][0].append(re_num[0])
+            if re_ite:
+                func_def[re_ite[0]][re_ite[1]][re_ite[2]][re_ite[3]]=[str(re_num[0])]#如果递归则添加[部分定义]
+
     return re_num[0]
 
 def to_num(i):
     if '.' in i or 'e' in i:
         try:
             i=float(i)
-        except BaseException:
+        except ArithmeticError:
             return 'Error - [%s] is not of type float'%i
     else:
         try:
             i=int(i)
-        except BaseException:
+        except ArithmeticError:
             return 'Error - [%s] is not of type int'%i
     return i
 
@@ -722,7 +789,7 @@ def equ_solve(arr):
     x__=2.71828e-3
     if len(arr)==3:
         x__=float(calc_(arr[2]))
-    for i in range(equ_ite):
+    for _ in range(equ_ite):
         #最大迭代次数
         y=cal([f,'(',str(x__),')'])
         y_=cal([f,'(',str(x__+equ_delta),')'])
@@ -737,7 +804,7 @@ def equ_solve(arr):
     else:
         printc(Fore.YELLOW+'Warning:Itenaration Limit Exceded!\nThe result might be inaccurate.')
     return x__
-def func_plot(arr,polar=False):
+def func_plot(arr,polar=False,penrose=False):
     assert len(arr)>=3
     global colorset
     colors=len(colorset)-1
@@ -753,6 +820,24 @@ def func_plot(arr,polar=False):
     s=int(step/m.fabs(step))
     if polar:
         ax=plt.subplot(polar=True)
+    if penrose:
+        plt.grid(False)
+        pxss=[]
+        pyss=[]
+        s=15
+        for u in range(6):
+            pxss.append([m.tan(u*m.pi/11)]*(2*s-1))
+            pyss.append([m.tan(t*m.pi/s/2) for t in range(1-s,s)])
+            pxss.append([-m.tan(u*m.pi/11)]*(2*s-1))
+            pyss.append([m.tan(t*m.pi/s/2) for t in range(1-s,s)])
+        for u in range(4):
+            plt.plot([m.pi*m.sin(m.pi*(u-1)/2),m.pi*m.sin(m.pi*u/2)],[m.pi*m.sin(m.pi*u/2),m.pi*m.sin(m.pi*(u+1)/2)],color='black',linewidth=0.7)
+        for x,y in zip(pxss,pyss):
+            x,y=[m.atan(u+v)+m.atan(u-v) for u,v in zip(x,y)],[m.atan(u+v)-m.atan(u-v) for u,v in zip(x,y)]
+            plt.plot([0]+x+[0],[-m.pi]+y+[m.pi],color='grey',linewidth=0.7)
+            plt.plot([-m.pi]+y+[m.pi],[0]+x+[0],color='grey',linewidth=0.7)
+        plt.axis('off')
+        plt.gca().set_aspect(1)
     for index,f in enumerate(fs):
         scatter=('.' in f)
         inte=('*' in f)
@@ -826,7 +911,7 @@ def func_plot(arr,polar=False):
                             horizontal.append((y+y_o)/2)
                     k_o=y-y_o
                     y_o=y
-                if m.fabs(y)<settings['bound']: #舍去较大的点
+                if penrose or m.fabs(y)<settings['bound']: #舍去较大的点
                     if polar and y<0:
                         xs.append(x+m.pi)
                         ys.append(0-y)
@@ -836,7 +921,7 @@ def func_plot(arr,polar=False):
                 else:
                     outofbound=True
                 last_y=y
-            except:
+            except (AssertionError,ArithmeticError):
                 xss.append(xs)
                 yss.append(ys)
                 verticle.append(x)
@@ -858,17 +943,19 @@ def func_plot(arr,polar=False):
             max_x,min_x=max(xs),min(xs)
             if min_x<=0<=max_x:
                 y_axis=True
-            if switches['vline'] and not polar:
+            if switches['vline'] and not (polar or penrose):
                 for x in verticle:
                     plt.axvline(x,linestyle='-.',color=colorset[0],linewidth=0.9)
-            if switches['hline'] and not polar:
+            if switches['hline'] and not (polar or penrose):
                 for y in horizontal:
                     plt.axhline(y,linestyle='-.',color=colorset[0],linewidth=0.9)
-            if x_axis and not polar:
+            if x_axis and not (polar or penrose):
                 plt.axhline(0,color='black',linewidth=0.7)
-            if y_axis and not polar:
+            if y_axis and not (polar or penrose):
                 plt.axvline(0,color='black',linewidth=0.7)
             for x,y in zip(xss,yss):
+                if penrose:
+                    x,y=[m.atan(u+v)+m.atan(u-v) for u,v in zip(x,y)],[m.atan(u+v)-m.atan(u-v) for u,v in zip(x,y)]
                 if scatter:
                     plt.scatter(x,y,color=colorset[index%colors+1],alpha=0.5,marker='.')
                 else:
@@ -944,7 +1031,7 @@ def func_density(arr):
                 ind=int((y-left)/diff)
                 if 0<=ind<cab_num:
                     cab[ind]+=1
-            except:
+            except (ArithmeticError,AssertionError):
                 pass
             last_y=y
         left-=diff/2
@@ -1003,7 +1090,7 @@ def func_list(arr):
                 exp_re=cal([f,'(',str(start),')'])
                 assert not isinstance(exp_re,str)
                 exp_re='%-10f'%exp_re
-            except:
+            except (ArithmeticError,AssertionError):
                 exp_re=Fore.RED+'Error   '+Fore.WHITE
             exp+='\t'+exp_re
         printc(exp)
@@ -1025,7 +1112,7 @@ def func_sum(arr):
         try:
             tmp=cal([f,'(',str(start),')'])
             assert not isinstance(tmp,str)
-        except:
+        except (ArithmeticError,AssertionError):
             pass
         else:
             exp_re+=tmp
@@ -1052,7 +1139,7 @@ def func_sumplot(arr):
         try:
             tmp=cal([f,'(',str(start),')'])
             assert not isinstance(tmp,str)
-        except:
+        except (ArithmeticError,AssertionError):
             pass
         else:
             exp_re+=tmp
@@ -1070,7 +1157,7 @@ def func_sumplot(arr):
         plt.clf()
         system('start '+plot_file+'&&attrib +h %s 2>nul'%plot_file)
     else:
-        raise Exception('Nothing to plot')
+        raise AssertionError('Nothing to plot')
     return exp_re
 def func_mltplot(arr):
     assert len(arr)>=3
@@ -1092,7 +1179,7 @@ def func_mltplot(arr):
         try:
             tmp=cal([f,'(',str(start),')'])
             assert not isinstance(tmp,str)
-        except:
+        except (ArithmeticError,AssertionError):
             pass
         else:
             exp_re*=tmp
@@ -1110,7 +1197,7 @@ def func_mltplot(arr):
         plt.clf()
         system('start '+plot_file+'&&attrib +h %s 2>nul'%plot_file)
     else:
-        raise Exception('Nothing to plot')
+        raise AssertionError('Nothing to plot')
     return exp_re
 def func_mlt(arr):
     assert len(arr)>=3
@@ -1128,7 +1215,7 @@ def func_mlt(arr):
         try:
             tmp=cal([f,'(',str(start),')'])
             assert not isinstance(tmp,str)
-        except:
+        except (ArithmeticError,AssertionError):
             pass
         else:
             exp_re*=tmp
@@ -1152,7 +1239,7 @@ def func_integ(arr):
         try:
             exp_re=cal([f,'(',str(start+i*delta),')'])
             assert not isinstance(exp_re,str)
-        except:
+        except (ArithmeticError,AssertionError):
             warning_=True
         else:
             if i==0 or i==step+1:
@@ -1172,7 +1259,7 @@ def int_(num):
 def is_int(num,preci=1e-10):
     return -preci<=int_(num)-num<=preci
 def pretty_print(num):#分数、根式、pi的显示
-    if num>1e15 or num<1e-5:
+    if num>1e15 or num<1e-4:
         return num
     for p in range(1,10000):
         q=num*p
@@ -1226,8 +1313,8 @@ def pretty_print(num):#分数、根式、pi的显示
             q_in*=x
             y-=1
         q_out*=x**(y/2)
-    if q_in>1e8:
-        print(Fore.YELLOW+'Warning: Might be inaccurate for big numbers.'+Fore.RESET)
+    # if q_in>1e8:
+    #     print(Fore.YELLOW+'Warning: Might be inaccurate for big numbers.'+Fore.RESET)
     p_out,q_out,q_in=str(int_(p_out)),str(int_(q_out)),'√'+str(int_(q_in))
     if q_out=='1':
         qq=q_in
@@ -1240,6 +1327,8 @@ def pretty_print(num):#分数、根式、pi的显示
         return qq+'/'+p_out
 
 def factor(num):
+    if int_(num)==0:
+        return {0:1}
     fact={}
     for p in primes:
         while num%p==0:
